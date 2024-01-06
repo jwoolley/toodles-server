@@ -1,7 +1,19 @@
 const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
 
 const PORT = process.env.PORT || 4000;
-const app = express();
+
+const corsAllowList = [];
+const corsOptions = {
+	origin: function(origin, callback) {
+		if (corsAllowList.indexOf(origin) !== -1 || !origin) {
+			callback(null, true);
+		} else {
+			callback(new Error('Request prevented by CORS policy'));
+		}
+	}
+};
 
 // hacky!! load from static file instead & fix
 const puzzlePageHtml = `<head>
@@ -54,6 +66,8 @@ function devGetPuzzle() {
 	return puzzles[index];
 }
 
+const app = express();
+
 app.get('/', (req, res) => {
   res.send('Hello World!')
 });
@@ -71,6 +85,8 @@ app.get('/daily-puzzle', async (req, res) => {
   }
 });
 
+app.use(cors(corsOptions));
+app.use(helmet());
 app.use(express.static('./src/server/static/images'));
 
 app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));

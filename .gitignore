@@ -7,6 +7,9 @@ yarn-error.log*
 
 *-scratch.html
 
+# Temp files
+*.swp
+
 # NPM!!!!
 package-lock.json
 
