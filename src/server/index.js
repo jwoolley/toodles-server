@@ -7,24 +7,21 @@ const app = express();
 const puzzlePageHtml = `<head>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Alice&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap" rel="stylesheet">
 
 	<style>
 	body {
 		background-color: #040300;
 	}
 
-  div.contentContainer {
+  .contentContainer {
 		padding: 1rem;
-		color: #00ffff;
-		text-align: center;
-		font-size: 2rem;
-		text-size-adjust: 500%;
-		font-family: Alice;
+		color: #e8d6a7;
+		text-align: left;
+		font-size: 1rem;
+		text-size-adjust: 200%;
+		font-family: 'Source Sans Pro';
 		position:  absolute;
-		left:  50%;
-		margin-right: -50%;
-		transform: translate(-50%, 0%);
 	}
 
 	@media screen and (max-width: 800px) {
@@ -34,7 +31,7 @@ const puzzlePageHtml = `<head>
   }
 	</style>
 </head>
-<body><div class="contentContainer">__PUZZLE_DATA__</div></body>`;
+<body><pre class="contentContainer">__PUZZLE_DATA__</pre></body>`;
 
 const puzzles = [
 	{ 
@@ -53,7 +50,7 @@ const puzzles = [
 ];
 
 function devGetPuzzle() {
-	const index = Math.Random() * puzzles.length;
+	const index = Math.floor(Math.random() * puzzles.length);
 	return puzzles[index];
 }
 
@@ -63,7 +60,7 @@ app.get('/', (req, res) => {
 
 app.get('/daily-puzzle', async (req, res) => {
   try {
-  	const html = puzzlePageHtml.replace('__PUZZLE_DATA__', devGetPuzzle());
+  	const html = puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(devGetPuzzle(), null, '&emsp;'));
   	res
   		.header('Content-Type', 'text/html')
   		.send(html);
