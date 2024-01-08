@@ -82,4 +82,4 @@ async function testAsyncFetchPuzzles(dbPath, tableName) {
 
 // testAsyncFetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
 
-module.exports = readPuzzlesFromDb;
+module.exports = { readPuzzlesFromDb };

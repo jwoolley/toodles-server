@@ -2,7 +2,12 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 
+const { readPuzzlesFromDb } = require('../lib/sqlite-connection');
+
 const PORT = process.env.PORT || 4000;
+
+const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
+const DAILY_PUZZLE_TABLE_NAME = 'daily_puzzles';
 
 const corsAllowList = [];
 const corsOptions = {
@@ -28,9 +33,9 @@ const puzzlePageHtml = `<head>
 
   .contentContainer {
 		padding: 1rem;
-		color: #e8d6a7;
+		color: #ffffe5;
 		text-align: left;
-		font-size: 1rem;
+		font-size: 1.25rem;
 		text-size-adjust: 200%;
 		font-family: 'Source Sans Pro';
 		position:  absolute;
@@ -66,6 +71,11 @@ function devGetPuzzle() {
 	return puzzles[index];
 }
 
+function fetchPuzzles(dbPath, tableName) {
+	console.log(`Reading puzzles from table ${tableName} in database ${dbPath}`);
+	return readPuzzlesFromDb(dbPath, tableName);
+}
+
 const app = express();
 
 app.get('/', (req, res) => {
@@ -74,7 +84,10 @@ app.get('/', (req, res) => {
 
 app.get('/daily-puzzle', async (req, res) => {
   try {
-  	const html = puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(devGetPuzzle(), null, '&emsp;'));
+  	// const html = puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(devGetPuzzle(), null, '&emsp;'));
+
+		const results = await fetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
+  	const html = puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(results.puzzles, null, '&emsp;'));
   	res
   		.header('Content-Type', 'text/html')
   		.send(html);
