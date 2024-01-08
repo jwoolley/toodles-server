@@ -1,4 +1,5 @@
-const sqlite = require('sqlite3').verbose();
+const sqlite3 = require('sqlite3').verbose();
+const sqlite = require('sqlite');
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
 const DAILY_PUZZLE_TABLE_NAME = 'daily_puzzles';
 console.log(`connecting to ${DB_PATH}`);
@@ -37,37 +38,48 @@ function dbRowToPuzzleData(dbRow) {
 	}
 }
 
-function callbackRetrievePuzzleDataFromDb(dbPath, tableName) {
-	const db = new sqlite.Database(dbPath, err => {
-		if (err) {
-			console.error(err.message);
-		} else {
-			console.log(`connected to ${dbPath}`);
-			db.each(`SELECT puzzle_id, starting_letters, scrambled_letters, hint, difficulty, solution_json, created_ts_seconds, puzzle_day FROM ${tableName}`,
-				(err, row) => {
-					try {
-						if (err) {
-							throw(err);
-						}
-						console.log(JSON.stringify(dbRowToPuzzleData(row), null, 2));
-						/*
-						console.log(
-							`\npuzzle_id: ${row.puzzle_id},`
-						+ `\nstarting_letters: ${row.starting_letters}`
-						+ `\nscrambled_letters: ${row.scrambled_letters}`
-						+ `\nhint: ${row.hint}`
-						+ `\ndifficulty: ${row.difficulty}`
-						+ `\nsolution_json: ${row.solution_json}`
-						+ `\ncreated_ts_seconds: ${row.created_ts_seconds}`
-						+ `\npuzzle_day: ${row.puzzle_day}`
-						);
-						*/
-					} catch (e) {
-						console.error(e.message);
-					};
-			});
-		}
-	});
+async function readPuzzlesFromDb(dbPath, tableName) {
+	try {
+		const db = await sqlite.open({
+			filename: dbPath,
+			driver: sqlite3.Database,
+		});
+
+		const rows = await db.all(
+			`SELECT puzzle_id, starting_letters, scrambled_letters, hint, difficulty, solution_json, created_ts_seconds, puzzle_day FROM ${tableName}`
+		);
+
+		// console.log(`Retrieved puzzle data from db: ` + JSON.stringify(rows, null, 2));
+
+		/*
+		rows.forEach(row => {
+			console.log(JSON.stringify(dbRowToPuzzleData(row), null, 2));
+		});
+		*/
+
+		const results = {
+			puzzles: [],
+			errors: [],
+		};
+
+		rows.forEach(row => {
+			try {
+				results.puzzles.push(dbRowToPuzzleData(row));
+			} catch (e) {
+				results.errors.push({ error: e.message, data: row });
+			}
+		});	
+		return results;
+	} catch(e) {
+		console.error(e.message);
+	}
 }
 
-callbackRetrievePuzzleDataFromDb(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
+async function testAsyncFetchPuzzles(dbPath, tableName) {
+	const results = await readPuzzlesFromDb(dbPath, tableName);
+	console.log('Retrieved puzzles from database:\n', JSON.stringify(results, null, 2));
+}
+
+// testAsyncFetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
+
+module.exports = readPuzzlesFromDb;
