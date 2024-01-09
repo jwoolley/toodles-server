@@ -1,11 +1,14 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-
-const { readPuzzlesFromDb } = require('../lib/sqlite-connection');
+const {
+	readPuzzlesFromDb, 
+	readSinglePuzzleFromDbByDateString,
+	readLatestPuzzleFromDbByDateString,
+} = require('../lib/sqlite-connection');
+const { isEmptyObject } = require('../lib/utils');
 
 const PORT = process.env.PORT || 4000;
-
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
 const DAILY_PUZZLE_TABLE_NAME = 'daily_puzzles';
 
@@ -19,6 +22,21 @@ const corsOptions = {
 		}
 	}
 };
+
+function isJsonRequest(req) {
+	const acceptJsonRegexp = /\bapplication\/json\b/;
+	const accept = req.header('accept');
+	return acceptJsonRegexp.test(accept);
+}
+
+function getDateString(date) {
+	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;	
+}
+
+// accepts a Date object, returns a new Date object with time = 00:00:00:000z
+function getDateAtMidnight(date) {
+	return new Date(Date.parse(getDateString(date)));
+}
 
 // hacky!! load from static file instead & fix
 const puzzlePageHtml = `<head>
@@ -71,9 +89,24 @@ function devGetPuzzle() {
 	return puzzles[index];
 }
 
-function fetchPuzzles(dbPath, tableName) {
+function getFormattedHtml(puzzleData) {
+  	return puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(puzzleData, null, '&emsp;'));
+}
+
+async function fetchPuzzles(dbPath, tableName) {
 	console.log(`Reading puzzles from table ${tableName} in database ${dbPath}`);
 	return readPuzzlesFromDb(dbPath, tableName);
+}
+
+// TODO: read from script-generated file instead of hitting the db directly
+async function getDailyPuzzle(dbPath, tableName) {
+	const today = new Date(); // NOTE THAT THIS WILL CAUSE PROBLEMS IF local date differs from db record (e.g. timezone difference)	
+	const dateStringToday = getDateString(getDateAtMidnight(today));
+	let puzzle = await readSinglePuzzleFromDbByDateString(dbPath, tableName, dateStringToday);
+	if (isEmptyObject(puzzle)) {
+		puzzle = await readLatestPuzzleFromDbByDateString(dbPath, tableName, dateStringToday);
+	}
+	return puzzle;
 }
 
 const app = express();
@@ -82,19 +115,45 @@ app.get('/', (req, res) => {
   res.send('Hello World!')
 });
 
-app.get('/daily-puzzle', async (req, res) => {
+app.get('/api/all-puzzles', async (req, res) => {
+	const defaultResponse = '[]';
   try {
-  	// const html = puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(devGetPuzzle(), null, '&emsp;'));
-
 		const results = await fetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
-  	const html = puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(results.puzzles, null, '&emsp;'));
+		const puzzleData = results.puzzles;
+		const content = isJsonRequest(req)
+			? JSON.stringify(puzzleData)
+	 		: getFormattedHtml(puzzleData);
+
+		const contentType = isJsonRequest(req) ? 'application/json' : 'text/html';
+
   	res
-  		.header('Content-Type', 'text/html')
-  		.send(html);
+  		.header('Content-Type', contentType)
+  		.send(content);
   } catch (e) {
-  	const errMessage = `Error making request to puzzle API: ${e.message}`;
+  	const errMessage = `Error rendering page or making request to puzzle API: ${e.message}`;
   	console.error(errMessage);
-  	res.send(errMessage);
+  	res.send(defaultResponse);
+  }
+});
+
+app.get('/api/daily-puzzle', async (req, res) => {
+	const defaultResponse = '{}';
+  try {
+		const puzzleData = await getDailyPuzzle(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
+
+		const contentType = isJsonRequest(req) ? 'application/json' : 'text/html';
+
+		const content = isJsonRequest(req)
+			? JSON.stringify(puzzleData)
+	 		: getFormattedHtml(puzzleData);
+
+  	res
+			.header('Content-Type', contentType)
+  		.send(content);
+  } catch (e) {
+  	const errMessage = `Error rendering page or making request to puzzle API: ${e.message}`;
+  	console.error(errMessage);
+  	res.send(defaultResponse);
   }
 });
 
