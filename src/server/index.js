@@ -1,8 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const fs = require('node:fs/promises');
 const { isEmptyObject } = require('../lib/utils');
+const {
+	readFile, 
+	loadStaticFile,
+} = require('../lib/file-manager');
 const {
 	readPuzzlesFromDb, 
 	readSinglePuzzleFromDbByDateString,
@@ -12,6 +15,10 @@ const {
 const PORT = process.env.PORT || 4000;
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
 const DAILY_PUZZLE_TABLE_NAME = process.env.DAILY_PUZZLE_TABLE_NAME || 'daily_puzzles';
+
+const puzzlePagePath = `${__dirname}/static/puzzle-page.html`;
+const staticFilePaths = [ puzzlePagePath ];
+const staticFileMap = {};
 
 const corsAllowList = [];
 const corsOptions = {
@@ -23,16 +30,6 @@ const corsOptions = {
 		}
 	}
 };
-
-const _fileMap = {};
-
-async function loadFileContents(filepath) {
-	if (!_fileMap[filepath]) {
-		console.log(`Reading file ${filepath}`); 
-		_fileMap[filepath] = await fs.readFile(filepath, 'utf-8');
-	}
-	return _fileMap[filepath]; 
-}
 
 function isJsonRequest(req) {
 	const acceptJsonRegexp = /\bapplication\/json\b/;
@@ -72,16 +69,9 @@ function devGetPuzzle() {
 	return puzzles[index];
 }
 
-const puzzlePagePath = `${__dirname}/static/puzzle-page.html`;
-const staticFilePaths = [
-	puzzlePagePath,
-];
-
-const staticFileMap = {};
-
 async function loadStaticFiles() {
 	staticFilePaths.forEach(async path => {
-		staticFileMap[path] = await loadFileContents(path);
+		staticFileMap[path] = await loadStaticFile(path);
 	});
 }
 
