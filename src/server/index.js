@@ -1,12 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const fs = require('node:fs/promises');
+const { isEmptyObject } = require('../lib/utils');
 const {
 	readPuzzlesFromDb, 
 	readSinglePuzzleFromDbByDateString,
 	readLatestPuzzleFromDbByDateString,
 } = require('../lib/sqlite-connection');
-const { isEmptyObject } = require('../lib/utils');
 
 const PORT = process.env.PORT || 4000;
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
@@ -23,6 +24,16 @@ const corsOptions = {
 	}
 };
 
+const _fileMap = {};
+
+async function loadFileContents(filepath) {
+	if (!_fileMap[filepath]) {
+		console.log(`Reading file ${filepath}`); 
+		_fileMap[filepath] = await fs.readFile(filepath, 'utf-8');
+	}
+	return _fileMap[filepath]; 
+}
+
 function isJsonRequest(req) {
 	const acceptJsonRegexp = /\bapplication\/json\b/;
 	const accept = req.header('accept');
@@ -38,36 +49,6 @@ function getDateAtMidnight(date) {
 	return new Date(Date.parse(getDateString(date)));
 }
 
-// hacky!! load from static file instead & fix
-const puzzlePageHtml = `<head>
-	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro&display=swap" rel="stylesheet">
-
-	<style>
-	body {
-		background-color: #040300;
-	}
-
-  .contentContainer {
-		padding: 1rem;
-		color: #ffffe5;
-		text-align: left;
-		font-size: 1.25rem;
-		text-size-adjust: 200%;
-		font-family: 'Source Sans Pro';
-		position:  absolute;
-	}
-
-	@media screen and (max-width: 800px) {
-  	   div.contentContainer {
-    	   padding: 2rem;
-	}
-  }
-	</style>
-</head>
-<body><pre class="contentContainer">__PUZZLE_DATA__</pre></body>`;
-
 const puzzles = [
 	{ 
 		id: 24,
@@ -80,7 +61,9 @@ const puzzles = [
 			"bear",
 			"bird",
 			"boar"
-		]
+		],
+		"createdTsSeconds": 1704832896,
+		"puzzleDay": 1704758400000
 	}
 ];
 
@@ -89,8 +72,23 @@ function devGetPuzzle() {
 	return puzzles[index];
 }
 
-function getFormattedHtml(puzzleData) {
-  	return puzzlePageHtml.replace('__PUZZLE_DATA__', JSON.stringify(puzzleData, null, '&emsp;'));
+const staticFilePaths = {
+	puzzlePage: `${__dirname}/static/puzzle-page.html`,
+};
+
+const staticFileMap = {};
+
+async function loadStaticFiles() {
+	
+	Object.keys(staticFilePaths).forEach(async key => {
+		const path = staticFilePaths[key];
+		staticFileMap[key] = await loadFileContents(path);
+	});
+}
+
+async function getFormattedHtml(puzzleData) {
+		const html = staticFileMap.puzzlePage;
+  	return html.replace('__PUZZLE_DATA__', JSON.stringify(puzzleData, null, '&emsp;'));
 }
 
 async function fetchPuzzles(dbPath, tableName) {
@@ -109,56 +107,62 @@ async function getDailyPuzzle(dbPath, tableName) {
 	return puzzle;
 }
 
-const app = express();
+async function launchServer() {
+	await loadStaticFiles();
 
-app.get('/', (req, res) => {
-  res.send('Hello World!')
-});
+	const app = express();
 
-app.get('/api/all-puzzles', async (req, res) => {
-	const defaultResponse = '[]';
-  try {
-		const results = await fetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
-		const puzzleData = results.puzzles;
-		const content = isJsonRequest(req)
-			? JSON.stringify(puzzleData)
-	 		: getFormattedHtml(puzzleData);
+	app.get('/', (req, res) => {
+		res.send('Hello World!')
+	});
 
-		const contentType = isJsonRequest(req) ? 'application/json' : 'text/html';
+	app.get('/api/all-puzzles', async (req, res) => {
+		const defaultResponse = '[]';
+		try {
+			const results = await fetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
+			const puzzleData = results.puzzles;
+			const content = isJsonRequest(req)
+				? JSON.stringify(puzzleData)
+				: await getFormattedHtml(puzzleData);
 
-  	res
-  		.header('Content-Type', contentType)
-  		.send(content);
-  } catch (e) {
-  	const errMessage = `Error rendering page or making request to puzzle API: ${e.message}`;
-  	console.error(errMessage);
-  	res.send(defaultResponse);
-  }
-});
+			const contentType = isJsonRequest(req) ? 'application/json' : 'text/html';
 
-app.get('/api/daily-puzzle', async (req, res) => {
-	const defaultResponse = '{}';
-  try {
-		const puzzleData = await getDailyPuzzle(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
+			res
+				.header('Content-Type', contentType)
+				.send(content);
+		} catch (e) {
+			const errMessage = `Error rendering page or making request to puzzle API: ${e.message}`;
+			console.error(errMessage);
+			res.send(defaultResponse);
+		}
+	});
 
-		const contentType = isJsonRequest(req) ? 'application/json' : 'text/html';
+	app.get('/api/daily-puzzle', async (req, res) => {
+		const defaultResponse = '{}';
+		try {
+			const puzzleData = await getDailyPuzzle(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
 
-		const content = isJsonRequest(req)
-			? JSON.stringify(puzzleData)
-	 		: getFormattedHtml(puzzleData);
+			const contentType = isJsonRequest(req) ? 'application/json' : 'text/html';
 
-  	res
-			.header('Content-Type', contentType)
-  		.send(content);
-  } catch (e) {
-  	const errMessage = `Error rendering page or making request to puzzle API: ${e.message}`;
-  	console.error(errMessage);
-  	res.send(defaultResponse);
-  }
-});
+			const content = isJsonRequest(req)
+				? JSON.stringify(puzzleData)
+				: await getFormattedHtml(puzzleData);
 
-app.use(cors(corsOptions));
-app.use(helmet());
-app.use(express.static('./src/server/static/images'));
+			res
+				.header('Content-Type', contentType)
+				.send(content);
+		} catch (e) {
+			const errMessage = `Error rendering page or making request to puzzle API: ${e.message}`;
+			console.error(errMessage);
+			res.send(defaultResponse);
+		}
+	});
 
-app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+	app.use(cors(corsOptions));
+	app.use(helmet());
+	app.use(express.static('./src/server/static/images'));
+
+	app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
+}
+
+launchServer();
