@@ -5,6 +5,7 @@
   "author": "Justin Woolley <jwoolley@users.noreply.github.com> (https://toodles.talespinner.space)",
   "main": "index.js",
   "scripts": {
+		"generate-daily-puzzle": "node ./src/scripts/generate-daily-puzzle.js",
     "start": "node index.js",
     "server": "node ./src/server/",
     "server-dev": "nodemon ./src/server/",

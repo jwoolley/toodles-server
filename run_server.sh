@@ -1,6 +1,0 @@
-#!/bin/bash
-
-GIT_BRANCH="dev-deploy"
-EXPRESS_DEV_SERVER_PORT=8080
-
-PORT=$EXPRESS_DEV_SERVER_PORT npm run server
