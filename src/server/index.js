@@ -16,7 +16,6 @@ const PORT = process.env.PORT || 4000;
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
 const DAILY_PUZZLE_TABLE_NAME = process.env.DAILY_PUZZLE_TABLE_NAME || 'daily_puzzles';
 
-const puzzlePagePath = `${__dirname}/static/puzzle-page.html`;
 const staticFilePaths = [ puzzlePagePath ];
 const staticFileMap = {};
 

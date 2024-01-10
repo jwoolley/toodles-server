@@ -51,6 +51,7 @@ config-override.*
 
 # output folders
 build/
+files/generated/
 out/
 tmp/
 
