@@ -10,7 +10,7 @@ const { isEmptyObject } = require('../lib/utils');
 
 const PORT = process.env.PORT || 4000;
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
-const DAILY_PUZZLE_TABLE_NAME = 'daily_puzzles';
+const DAILY_PUZZLE_TABLE_NAME = process.env.DAILY_PUZZLE_TABLE_NAME || 'daily_puzzles';
 
 const corsAllowList = [];
 const corsOptions = {
