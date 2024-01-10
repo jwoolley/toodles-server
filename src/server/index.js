@@ -6,11 +6,11 @@ const {
 	readFile, 
 	loadStaticFile,
 } = require('../lib/file-manager');
+const { readPuzzlesFromDb } = require('../lib/sqlite-connection');
 const {
-	readPuzzlesFromDb, 
-	readSinglePuzzleFromDbByDateString,
-	readLatestPuzzleFromDbByDateString,
-} = require('../lib/sqlite-connection');
+	dailyPuzzle: dailyPuzzlePath,
+	puzzlePage: puzzlePagePath,
+} = require('../constants/filepaths');
 
 const PORT = process.env.PORT || 4000;
 const DB_PATH = process.env.DB_PATH || '/home/devuser/databases/toodles-dev.db';
@@ -34,15 +34,6 @@ function isJsonRequest(req) {
 	const acceptJsonRegexp = /\bapplication\/json\b/;
 	const accept = req.header('accept');
 	return acceptJsonRegexp.test(accept);
-}
-
-function getDateString(date) {
-	return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;	
-}
-
-// accepts a Date object, returns a new Date object with time = 00:00:00:000z
-function getDateAtMidnight(date) {
-	return new Date(Date.parse(getDateString(date)));
 }
 
 const puzzles = [
@@ -71,6 +62,7 @@ function devGetPuzzle() {
 async function loadStaticFiles() {
 	staticFilePaths.forEach(async path => {
 		staticFileMap[path] = await loadStaticFile(path);
+		console.log(`Loaded file ${path}`)
 	});
 }
 
@@ -84,15 +76,14 @@ async function fetchPuzzles(dbPath, tableName) {
 	return readPuzzlesFromDb(dbPath, tableName);
 }
 
-// TODO: read from script-generated file instead of hitting the db directly
-async function getDailyPuzzle(dbPath, tableName) {
-	const today = new Date(); // NOTE THAT THIS WILL CAUSE PROBLEMS IF local date differs from db record (e.g. timezone difference)	
-	const dateStringToday = getDateString(getDateAtMidnight(today));
-	let puzzle = await readSinglePuzzleFromDbByDateString(dbPath, tableName, dateStringToday);
-	if (isEmptyObject(puzzle)) {
-		puzzle = await readLatestPuzzleFromDbByDateString(dbPath, tableName, dateStringToday);
+async function getDailyPuzzle() {
+	try {
+		const jsonString = await readFile(dailyPuzzlePath);
+		return JSON.parse(jsonString);
+	} catch(e) {
+		console.error(e);
+		return '{}';
 	}
-	return puzzle;
 }
 
 async function launchServer() {
