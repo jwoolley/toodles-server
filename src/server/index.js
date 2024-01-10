@@ -72,22 +72,21 @@ function devGetPuzzle() {
 	return puzzles[index];
 }
 
-const staticFilePaths = {
-	puzzlePage: `${__dirname}/static/puzzle-page.html`,
-};
+const puzzlePagePath = `${__dirname}/static/puzzle-page.html`;
+const staticFilePaths = [
+	puzzlePagePath,
+];
 
 const staticFileMap = {};
 
 async function loadStaticFiles() {
-	
-	Object.keys(staticFilePaths).forEach(async key => {
-		const path = staticFilePaths[key];
-		staticFileMap[key] = await loadFileContents(path);
+	staticFilePaths.forEach(async path => {
+		staticFileMap[path] = await loadFileContents(path);
 	});
 }
 
 async function getFormattedHtml(puzzleData) {
-		const html = staticFileMap.puzzlePage;
+		const html = staticFileMap[puzzlePagePath];
   	return html.replace('__PUZZLE_DATA__', JSON.stringify(puzzleData, null, '&emsp;'));
 }
 
