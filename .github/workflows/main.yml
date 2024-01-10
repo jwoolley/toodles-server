@@ -18,7 +18,7 @@ jobs:
         username: ${{ secrets.EXPRESS_SERVER_VPS_USERNAME }}
         key: ${{ secrets.EXPRESS_SERVER_VPS_SSHKEY }}
         source: "."
-        target: "/opt/express/talespinner"
+        target: "/opt/express/toodles-server"
 
     - name: Launch server
       uses: appleboy/ssh-action@master
