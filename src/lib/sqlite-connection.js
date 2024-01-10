@@ -57,10 +57,6 @@ async function readPuzzlesFromDb(dbPath, tableName) {
 			`SELECT puzzle_id, starting_letters, scrambled_letters, hint, difficulty, solution_json, created_ts_seconds, puzzle_day FROM ${tableName}`
 		);
 
-		rows.forEach(row => {
-			console.log(JSON.stringify(dbRowToPuzzleData(row), null, 2));
-		});
-
 		const results = {
 			puzzles: [],
 			errors: [],
@@ -113,7 +109,6 @@ async function readLatestPuzzleFromDbByDateString(dbPath, tableName, dateString)
 		const db = await getDb(dbPath);
 		try {
 			const row = await db.get(sqlStatement, [dateString]);
-			console.log("====> row: " + JSON.stringify(row) + ` [dateString: ${dateString}`);
 			return dbRowToPuzzleData(row);
 		} catch(e) {
 			console.error(`Error parsing puzzle data from db`, e.message);
