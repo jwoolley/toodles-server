@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const { isEmptyObject } = require('../lib/utils');
+const { encodeHtml } = require('../lib/html-utils');
 const {
 	readFile, 
 	loadStaticFile,
@@ -68,7 +69,7 @@ async function loadStaticFiles() {
 
 async function getFormattedHtml(puzzleData) {
 		const html = staticFileMap[puzzlePagePath];
-  	return html.replace('__PUZZLE_DATA__', JSON.stringify(puzzleData, null, '&emsp;'));
+  	return html.replace('__PUZZLE_DATA__', encodeHtml(JSON.stringify(puzzleData, null, 4)));
 }
 
 async function fetchPuzzles(dbPath, tableName) {
