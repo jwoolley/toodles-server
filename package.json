@@ -5,7 +5,7 @@
   "author": "Justin Woolley <jwoolley@users.noreply.github.com> (https://toodles.talespinner.space)",
   "main": "index.js",
   "scripts": {
-		"generate-daily-puzzle": "node ./src/scripts/generate-daily-puzzle.js",
+    "generate-daily-puzzle": "node ./src/scripts/generate-daily-puzzle.js",
     "start": "node index.js",
     "server": "node ./src/server/",
     "server-dev": "nodemon ./src/server/",
@@ -24,7 +24,8 @@
     "helmet": "^7.1.0",
     "request": "^2.88.2",
     "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
