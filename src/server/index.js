@@ -21,14 +21,21 @@ const staticFilePaths = [ puzzlePagePath ];
 const staticFileMap = {};
 
 const corsAllowList = [];
-const corsOptions = {
+const defaultCorsOptions = {
+	methods: ['PUT', 'UPDATE', 'DELETE'],
 	origin: function(origin, callback) {
 		if (corsAllowList.indexOf(origin) !== -1 || !origin) {
 			callback(null, true);
 		} else {
 			callback(new Error('Request prevented by CORS policy'));
 		}
-	}
+	},
+	optionsSuccessStatus: 200,
+};
+const getRequestCorsOptions = {
+	methods: ['GET'],
+	origin: true,
+	optionsSuccessStatus: 200,
 };
 
 function isJsonRequest(req) {
@@ -92,11 +99,11 @@ async function launchServer() {
 
 	const app = express();
 
-	app.get('/', (req, res) => {
+	app.get('/', cors(getRequestCorsOptions), (req, res) => {
 		res.send('Hello World!')
 	});
 
-	app.get('/api/all-puzzles', async (req, res) => {
+	app.get('/api/all-puzzles', cors(getRequestCorsOptions), async (req, res) => {
 		const defaultResponse = '[]';
 		try {
 			const results = await fetchPuzzles(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
@@ -117,7 +124,7 @@ async function launchServer() {
 		}
 	});
 
-	app.get('/api/daily-puzzle', async (req, res) => {
+	app.get('/api/daily-puzzle', cors(getRequestCorsOptions), async (req, res) => {
 		const defaultResponse = '{}';
 		try {
 			const puzzleData = await getDailyPuzzle(DB_PATH, DAILY_PUZZLE_TABLE_NAME);
@@ -138,8 +145,7 @@ async function launchServer() {
 		}
 	});
 
-	app.use(cors(corsOptions));
-	app.use(helmet());
+	// app.use(helmet());
 	app.use(express.static('./src/server/static/images'));
 
 	app.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
